@@ -24,7 +24,92 @@
 
 Вы можете добавить `SwiftDataHandler` в ваш проект с помощью Swift Package Manager или склонировать репозиторий и интегрировать его в ваш проект вручную.
 
-## Использование
+## Использование HandlerKey
+
+### Создание DataProvider
+
+```swift
+import Foundation
+import SwiftData
+import DataHandler
+
+public final class DataProvider: Sendable {
+  public static let shared = DataProvider()
+
+  public let sharedModelContainer: ModelContainer = {
+    let schema = Schema(CurrentScheme.models)
+    let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+
+    do {
+      let modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
+      print("🚧 " + (modelContainer.configurations.first?.url.path(percentEncoded: false) ?? ""))
+      return modelContainer
+    } catch {
+      fatalError("Could not create ModelContainer: \(error)")
+    }
+  }()
+
+  public let previewContainer: ModelContainer = {
+    let schema = Schema(CurrentScheme.models)
+    let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+    do {
+      return try ModelContainer(for: schema, configurations: [modelConfiguration])
+    } catch {
+      fatalError("Could not create ModelContainer: \(error)")
+    }
+  }()
+
+  public init() {}
+}
+```
+
+### Создание DataProvider+EnvironmentKey
+
+```swift
+import DataHandler
+import SwiftUI
+
+extension DataProvider {
+  public func handlerCreator(preview: Bool = false) -> @Sendable () async -> CRUDHandler {
+    let container = preview ? previewContainer : sharedModelContainer
+    return { DataHandler(modelContainer: container) }
+  }
+}
+
+public class HandlerKey: EnvironmentKey {
+  public static let defaultValue: @Sendable () async -> CRUDHandler? = { nil }
+}
+
+extension EnvironmentValues {
+  public var createDataHandler: @Sendable () async -> CRUDHandler? {
+    get { self[HandlerKey.self] }
+    set { self[HandlerKey.self] = newValue }
+  }
+}
+```
+
+
+
+## Интеграция в App
+
+```swift
+@main
+struct MyApp: App {
+  let dataProvider = DataProvider.shared
+
+  var body: some Scene {
+    WindowGroup {
+      Main.Screen()
+      .environment(\.createDataHandler, dataProvider.handlerCreator())
+    }
+    .modelContainer(dataProvider.sharedModelContainer)
+  }
+}
+```
+
+
+
+## Использование DataHandler
 
 ### Пример создания и чтения объектов
 
@@ -34,7 +119,7 @@ let recipeId = try await dataHandler.createItem(dto: sharedRecipeDTO, type: Reci
 
 // Чтение существующего рецепта по идентификатору
 if let existingRecipe = try await dataHandler.readItem(id: recipeId, type: RecipeModel.self) {
-    print("Recipe: \(existingRecipe.name)")
+  print("Recipe: \(existingRecipe.name)")
 }
 ```
 
@@ -57,11 +142,11 @@ try await dataHandler.deleteItem(id: recipeId, type: RecipeModel.self)
 ```swift
 // Добавление ингредиентов к рецепту
 try await dataHandler.addRelation(
-    parentID: recipeId,
-    parentType: RecipeModel.self,
-    childIDs: ingredientIDs,
-    childType: IngredientModel.self,
-    relationKeyPath: \RecipeModel.ingredients
+  parentID: recipeId,
+  parentType: RecipeModel.self,
+  childIDs: ingredientIDs,
+  childType: IngredientModel.self,
+  relationKeyPath: \RecipeModel.ingredients
 )
 ```
 

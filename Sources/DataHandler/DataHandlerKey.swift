@@ -14,5 +14,5 @@ public class DataHandlerKey: EnvironmentKey {
 
 	/// Значение по умолчанию для ключа `DataHandlerKey`.
 	/// По умолчанию это замыкание, которое возвращает `nil`, что означает отсутствие обработчика данных в окружении.
-	public static let defaultValue: @Sendable () async -> (any CRUDHandler)? = { nil }
+	public static let defaultValue: @Sendable () async -> CRUDHandler? = { nil }
 }

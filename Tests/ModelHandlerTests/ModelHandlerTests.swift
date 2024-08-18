@@ -1,5 +1,5 @@
 import XCTest
-@testable import ModelHandler
+@testable import DataHandler
 
 final class ModelHandlerTests: XCTestCase {
     func testExample() throws {

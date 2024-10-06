@@ -28,6 +28,18 @@ public protocol CRUDHandler {
 	/// - Throws: Ошибка, если создание или сохранение объекта завершилось неудачей.
 	@discardableResult
 	func createItem<Item: DTOConvertible>(dto: Item.DTO, type: Item.Type) async throws -> PersistentIdentifier
+	
+	/// Сохраняет объект в БД
+	/// - Parameter item: объект для сохранения
+	/// - Returns: Идентификатор `PersistentIdentifier` вновь созданного объекта
+	@discardableResult
+	func createItem<Item: DTOConvertible>(item: Item) async throws -> PersistentIdentifier
+	
+	/// Сохраняет объекты в БД
+	/// - Parameter items: объекты для сохранения
+	/// - Returns: Идентификаторы `PersistentIdentifier` вновь созданных объектов
+	@discardableResult
+	func createItems<Item: DTOConvertible>(items: [Item]) async throws -> [PersistentIdentifier]
 
 	/// Считывает несколько объектов из базы данных по их идентификаторам.
 	/// - Parameter ids: Массив идентификаторов `PersistentIdentifier` для объектов, которые нужно считать.
@@ -105,29 +117,62 @@ public actor DataHandler: CRUDHandler {
 		case deleteFailed
 	}
 
-	@discardableResult public func createItems<Item: DTOConvertible>(dto: [Item.DTO], type: Item.Type) throws -> [PersistentIdentifier] {
+	@discardableResult
+	public func createItems<Item: DTOConvertible>(
+		dto: [Item.DTO],
+		type: Item.Type
+	) throws -> [PersistentIdentifier] {
 		try dto.map { try createItem(dto: $0, type: type) }
 	}
 
-	@discardableResult public func createItem<Item: DTOConvertible>(dto: Item.DTO, type: Item.Type) throws -> PersistentIdentifier {
+	@discardableResult
+	public func createItem<Item: DTOConvertible>(
+		dto: Item.DTO,
+		type: Item.Type
+	) throws -> PersistentIdentifier {
 		guard let item = Item.convert(from: dto) else {
 			throw HandlerError.invalideData
 		}
 		modelContext.insert(item)
 		do {
 			try modelContext.save()
-			return item.persistentModelID  // предполагается, что модели имеют свойство persistentModelID
+			return item.persistentModelID
 		} catch let err {
 			print(err)
 			throw HandlerError.creationFailed
 		}
 	}
 
-	public func readItems<Item: DTOConvertible>(ids: [PersistentIdentifier], type: Item.Type) throws -> [Item] {
+	public func createItem<Item: DTOConvertible>(
+		item: Item
+	) throws -> PersistentIdentifier {
+		modelContext.insert(item)
+		do {
+			try modelContext.save()
+			return item.persistentModelID
+		} catch let err {
+			print(err)
+			throw HandlerError.creationFailed
+		}
+	}
+
+	public func createItems<Item: DTOConvertible>(
+		items: [Item]
+	) throws -> [PersistentIdentifier] {
+		try items.map { try createItem(item: $0) }
+	}
+
+	public func readItems<Item: DTOConvertible>(
+		ids: [PersistentIdentifier],
+		type: Item.Type
+	) throws -> [Item] {
 		try ids.compactMap { try readItem(id: $0, type: type) }
 	}
 
-	public func readItem<Item: DTOConvertible>(id: PersistentIdentifier, type: Item.Type) throws -> Item? {
+	public func readItem<Item: DTOConvertible>(
+		id: PersistentIdentifier,
+		type: Item.Type
+	) throws -> Item? {
 		guard let item = self[id, as: Item.self] else {
 			throw HandlerError.itemNotFound
 		}
@@ -154,11 +199,17 @@ public actor DataHandler: CRUDHandler {
 		}
 	}
 
-	public func deleteItems<Item: DTOConvertible>(ids: [PersistentIdentifier], type: Item.Type) throws {
+	public func deleteItems<Item: DTOConvertible>(
+		ids: [PersistentIdentifier],
+		type: Item.Type
+	) throws {
 		try ids.forEach { try deleteItem(id: $0, type: type) }
 	}
 
-	public func deleteItem<Item: DTOConvertible>(id: PersistentIdentifier, type: Item.Type) throws {
+	public func deleteItem<Item: DTOConvertible>(
+		id: PersistentIdentifier,
+		type: Item.Type
+	) throws {
 		guard let item = self[id, as: Item.self] else {
 			throw HandlerError.itemNotFound
 		}

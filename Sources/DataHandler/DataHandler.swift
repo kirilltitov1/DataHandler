@@ -11,7 +11,7 @@ import SwiftData
 /// Он обеспечивает универсальный способ взаимодействия с объектами, которые можно конвертировать между DTO и персистентными моделями.
 ///
 /// `Item` должен соответствовать протоколу `DTOConvertible`, который определяет способность конвертации между DTO и моделью.
-public protocol CRUDHandler {
+public protocol CRUDHandler: Sendable {
 
 	/// Создает несколько новых объектов на основе переданных DTO и сохраняет их в базе данных.
 	/// - Parameter dto: Один или несколько объектов типа `DTO`, которые будут конвертированы и сохранены.
@@ -91,7 +91,7 @@ public protocol CRUDHandler {
 		parentType: Parent.Type,
 		childIDs: [PersistentIdentifier],
 		childType: Child.Type,
-		relationKeyPath: ReferenceWritableKeyPath<Parent, [Child]>
+		relationKeyPath: Sendable & ReferenceWritableKeyPath<Parent, [Child]>
 	) async throws
 	
 	/// Выполняет кастомный запрос в базе данных и возвращает идентификаторы найденных объектов.
@@ -233,7 +233,7 @@ public actor DataHandler: CRUDHandler {
 		parentType: Parent.Type,
 		childIDs: [PersistentIdentifier],
 		childType: Child.Type,
-		relationKeyPath: ReferenceWritableKeyPath<Parent, [Child]>
+		relationKeyPath: Sendable & ReferenceWritableKeyPath<Parent, [Child]>
 	) throws {
 		// Чтение родительского элемента
 		guard let parent = try readItem(id: parentID, type: parentType) else {

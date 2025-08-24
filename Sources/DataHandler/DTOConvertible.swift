@@ -8,7 +8,7 @@
 import SwiftData
 
 /// Протокол для конвертации и обновления с shared KMM на SwiftData
-public protocol DTOConvertible<DTO>: Sendable, PersistentModel, Codable where DTO == Sendable {
+public protocol DTOConvertible<DTO>: Sendable, PersistentModel, Codable where DTO: Sendable {
 	/// shared ДТО для обновления элемента базы данных
 	associatedtype DTO
 
